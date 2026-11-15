@@ -1,0 +1,54 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.special import erfc
+
+N = 300_000
+L_valores = [1, 2, 3, 4]
+
+snr_db = np.linspace(-10, 25, 70)
+snr_lin = 10**(snr_db / 10)
+
+def q_func(x):
+    return 0.5 * erfc(x / np.sqrt(2))
+
+plt.figure(figsize=(9, 6))
+cores = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']
+
+rng = np.random.default_rng(seed=42)
+
+for idx, L in enumerate(L_valores):
+    sep_media_lista = []
+    
+    potencia_canal = rng.exponential(scale=1.0, size=(N, L))
+    
+    for gamma_m in snr_lin:
+        gamma_l = gamma_m * potencia_canal
+        
+        gamma_s_egc = (1.0 / L) * (np.sum(np.sqrt(gamma_l), axis=1))**2
+        
+        arg = np.sqrt(gamma_s_egc / 5.0)
+        ps_inst = 3 * q_func(arg) - 2.25 * (q_func(arg))**2
+        
+        sep_media_lista.append(np.mean(ps_inst))
+    
+    plt.semilogy(
+        snr_db,
+        sep_media_lista,
+        label=f'L = {L}',
+        color=cores[idx],
+        marker='+',
+        linestyle='-',
+        markevery=6,
+        markersize=7,
+        linewidth=0
+    )
+
+plt.title(f'SEP Equal Gain Combining (EGC) (16-QAM (Simulação), $N = {N}$)', fontsize=12)
+plt.xlabel('SNR Média por Ramo $\\bar{\\gamma}$ (dB)', fontsize=11)
+plt.ylabel('Probabilidade de Erro de Símbolo Média (SEP - $\\bar{P}_s$)', fontsize=11)
+plt.ylim([1e-5, 1])
+plt.xlim([snr_db[0], snr_db[-1]])
+plt.grid(True, which='both', linestyle='--', alpha=0.6)
+plt.legend(title='Ordem de Diversidade', fontsize=10)
+plt.tight_layout()
+plt.show()

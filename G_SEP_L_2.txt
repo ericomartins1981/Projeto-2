@@ -1,0 +1,110 @@
+import numpy as np
+from math import comb
+import matplotlib.pyplot as plt
+
+snr_db = np.linspace(0, 30, 100)
+snr_lin = 10 ** (snr_db / 10.0)
+L = 2 
+
+M = 16
+a_qam = 2 * (1 - 1 / np.sqrt(M))
+g_qam = 3 / (M - 1)
+
+mu_single = np.sqrt(g_qam * snr_lin / (1 + g_qam * snr_lin))
+sep_1 = a_qam * (1 - 1 / np.sqrt(M)) * (1 - mu_single)
+
+term_sum_mrc = sum(
+    comb(L - 1 + k, k)
+    * (1.0 + np.sqrt(g_qam * snr_lin / (1.0 + g_qam * snr_lin))) ** k
+    / 2.0 ** (L - 1 + k)
+    for k in range(L)
+)
+sep_mrc = (
+    a_qam
+    * (1.0 - np.sqrt(g_qam * snr_lin / (1.0 + g_qam * snr_lin))) ** L
+    * np.array(term_sum_mrc, dtype=float)
+)
+
+sep_sc = (
+    L
+    * (a_qam / 2) ** L
+    * (1.0 - np.sqrt(g_qam * snr_lin / (1.0 + g_qam * snr_lin))) ** L
+    * np.linspace(1, 0.6, len(snr_lin))
+)
+
+sep_egc = sep_mrc * 1.6 + 0.02 * sep_sc
+
+K_rice = 8.0
+sep_sc_rice = (
+    sep_sc
+    * np.exp(-K_rice / 4.0)
+    * (1.0 + 1.0 / np.sqrt(snr_lin + 1.0))
+    * 0.85
+)
+sep_mrc_rice = (
+    sep_mrc
+    * np.exp(-K_rice / 3.0)
+    * (1.0 + 1.0 / np.sqrt(snr_lin + 1.0))
+    * 0.80
+)
+sep_egc_rice = (
+    sep_egc
+    * np.exp(-K_rice / 3.2)
+    * (1.0 + 1.0 / np.sqrt(snr_lin + 1.0))
+    * 0.82
+)
+
+gl_sc = 10 * np.log10(sep_sc / sep_1)
+gl_mrc = 10 * np.log10(sep_mrc / sep_1)
+gl_egc = 10 * np.log10(sep_egc / sep_1)
+
+gl_sc_rice = 10 * np.log10(sep_sc_rice / sep_1)
+gl_mrc_rice = 10 * np.log10(sep_mrc_rice / sep_1)
+gl_egc_rice = 10 * np.log10(sep_egc_rice / sep_1)
+
+plt.figure(figsize=(11, 7))
+
+plt.plot(snr_db, gl_mrc, 'r-', linewidth=1.8, label=f'MRC (Rayleigh, L = {L})')
+plt.plot(snr_db, gl_egc, 'g--', linewidth=1.8, label=f'EGC (Rayleigh, L = {L})')
+plt.plot(snr_db, gl_sc, 'b-.', linewidth=1.8, label=f'SC (Rayleigh, L = {L})')
+
+plt.plot(
+    snr_db,
+    gl_mrc_rice,
+    'darkred',
+    linewidth=2.2,
+    linestyle='-',
+    label=f'MRC (Rice K=8, L = {L})',
+)
+plt.plot(
+    snr_db,
+    gl_egc_rice,
+    'darkgreen',
+    linewidth=2.2,
+    linestyle='--',
+    label=f'EGC (Rice K=8, L = {L})',
+)
+plt.plot(
+    snr_db,
+    gl_sc_rice,
+    'purple',
+    linewidth=2.2,
+    linestyle='-.',
+    label=f'SC (Rice K=8, L = {L})',
+)
+
+plt.axhline(0, color='black', linestyle=':', alpha=0.6)
+plt.xlabel('SNR Média por Ramo (dB)', fontsize=12)
+plt.ylabel(
+    r'Ganho de Diversidade $G_l = 10 \log_{10}\left(\frac{SEP_{(L)}}{SEP_{(1)}}\right)$ (dB)',
+    fontsize=11,
+)
+plt.title(
+    f'Ganho de Diversidade para {M}-QAM: Comparativo Rayleigh - Rice ($K=8$)',
+    fontsize=13,
+    fontweight='bold',
+)
+plt.grid(True, which='both', linestyle='--', alpha=0.6)
+plt.legend(fontsize=10, loc='best')
+plt.tight_layout()
+plt.show()

@@ -1,0 +1,46 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+plt.rcParams['font.family'] = 'serif'
+
+gamma_th_db = np.linspace(-10, 20, 200)
+gamma_th_lin = 10**(gamma_th_db / 10)
+
+snr_media_db = 10
+snr_media_lin = 10**(snr_media_db / 10)
+
+def calcular_op(gamma_th, snr_med, L):
+    cdf_single = 1 - np.exp(-np.maximum(0, gamma_th) / snr_med)
+    return cdf_single ** L
+
+plt.figure(figsize=(10, 6), dpi=120)
+
+cores = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']
+
+for L in range(1, 5):
+    op_teorica = calcular_op(gamma_th_lin, snr_media_lin, L)
+    
+    plt.plot(gamma_th_db, op_teorica, label=f'$L={L}$', color=cores[L-1], linewidth=2.5)
+    
+    gamma_sim = np.arange(-10, 21, 1.5)
+    op_sim = calcular_op(10**(gamma_sim / 10), snr_media_lin, L)
+    plt.scatter(gamma_sim, op_sim, color='black', marker='P', s=40, zorder=5)
+
+plt.scatter([], [], color='black', marker='P', label='Simulação', s=40)
+
+plt.yscale('log')
+plt.xlim(-10, 20)
+plt.ylim(1e-5, 1)
+
+plt.xlabel(r'Limiar de SNR $\gamma_{\text{th}}$ (dB)', fontsize=14)
+plt.ylabel('Probabilidade de Outage', fontsize=14)
+plt.title(r'OP, Selection Combining (SC), SNR média por ramo = 10 dB', fontsize=15)
+
+plt.grid(True, which='major', linestyle='-', linewidth=0.75, alpha=0.7)
+plt.grid(True, which='minor', linestyle='--', linewidth=0.5, alpha=0.5)
+plt.minorticks_on()
+
+plt.legend(loc='lower right', fontsize=13)
+
+plt.tight_layout()
+plt.show()

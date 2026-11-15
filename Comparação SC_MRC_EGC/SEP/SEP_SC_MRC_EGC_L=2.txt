@@ -1,0 +1,59 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.special import erfc
+
+N = 300_000
+L = 2
+
+snr_db = np.linspace(-10, 25, 70)
+snr_lin = 10**(snr_db / 10)
+
+def q_func(x):
+    return 0.5 * erfc(x / np.sqrt(2))
+
+plt.figure(figsize=(9, 6))
+rng = np.random.default_rng(seed=42)
+
+potencia_canal = rng.exponential(scale=1.0, size=(N, L))
+
+sep_resultados = {'SC': [], 'EGC': [], 'MRC': []}
+
+for snr_m in snr_lin:
+    gamma_l = snr_m * potencia_canal
+    
+    gamma_sc = np.max(gamma_l, axis=1)
+    gamma_mrc = np.sum(gamma_l, axis=1)
+    gamma_egc = (1.0 / L) * (np.sum(np.sqrt(gamma_l), axis=1))**2
+    
+    tecnicas_gamma = {'SC': gamma_sc, 'EGC': gamma_egc, 'MRC': gamma_mrc}
+    
+    for nome, gamma_s in tecnicas_gamma.items():
+        arg = np.sqrt(gamma_s / 5.0)
+        ps_inst = 3 * q_func(arg) - 2.25 * (q_func(arg))**2
+        sep_media = np.mean(ps_inst)
+        sep_resultados[nome].append(sep_media)
+
+cores = {'SC': '#1f77b4', 'EGC': '#ff7f0e', 'MRC': '#2ca02c'}
+marcadores = {'SC': 'o', 'EGC': '+', 'MRC': '^'}
+
+for nome, sep_lista in sep_resultados.items():
+    plt.semilogy(
+        snr_db,
+        sep_lista,
+        label=f'{nome} (L = {L})',
+        color=cores[nome],
+        marker=marcadores[nome],
+        markevery=6,
+        markersize=7,
+        linewidth=0 if nome == 'EGC' else 1.5
+    )
+
+plt.title(f'SEP 16-QAM - SC, EGC e MRC ($L = {L}$, $N = {N}$)', fontsize=12)
+plt.xlabel('SNR Média por Ramo $\\bar{\\gamma}$ (dB)', fontsize=11)
+plt.ylabel('Probabilidade de Erro de Símbolo Média (SEP)', fontsize=11)
+plt.ylim([1e-5, 1])
+plt.xlim([snr_db[0], snr_db[-1]])
+plt.grid(True, which='both', linestyle='--', alpha=0.6)
+plt.legend(fontsize=10)
+plt.tight_layout()
+plt.show()
